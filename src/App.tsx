@@ -39,16 +39,17 @@ function App() {
   return (
     <>
       {session && (
-        <div>
+        <div className="flex items-center gap-3 justify-center">
           <button
             onClick={signOut}
             className="cursor-pointer border-white border px-2 rounded-2xl"
           >
             Sign Out
           </button>
+          <div className="text-sm">{session?.user?.email}</div>
         </div>
       )}
-      {session ? <TasksCrud /> : <Auth />}
+      {session ? <TasksCrud session={session} /> : <Auth />}
     </>
   );
 }

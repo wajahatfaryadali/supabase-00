@@ -1,8 +1,6 @@
-import {
-  useEffect,
-  useState,
-} from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../supabase-client";
+import type { Session } from "@supabase/supabase-js";
 
 interface Task {
   id?: string;
@@ -10,7 +8,7 @@ interface Task {
   description: string;
 }
 
-function TasksCrud() {
+function TasksCrud({ session }: { session: Session }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -30,10 +28,30 @@ function TasksCrud() {
     setTasks(data as Task[]);
   };
 
-  // @ts-ignore
   useEffect(() => {
     getTasksList();
   }, []);
+
+  useEffect(() => {
+  const channel = supabase.channel("tasks-channel");
+
+  // Listen for all changes
+  channel.on(
+    "postgres_changes",
+    { event: "*", schema: "public", table: "tasks" },
+    (payload) => {
+      console.log("Change detected: ", payload);
+      getTasksList()
+    }
+  ).subscribe((status) => {
+    console.log("Subscription status: ", status);
+  });
+
+  // Cleanup on unmount
+  return () => {
+    channel.unsubscribe();
+  };
+}, []);
 
   const deleteTaskById = async (id: string | number | undefined) => {
     if (!id) {
@@ -62,7 +80,11 @@ function TasksCrud() {
       console.log("checking ********* ", editingId);
       const { error, data } = await supabase
         .from("tasks")
-        .update({ title: title, description: description })
+        .update({
+          title: title,
+          description: description,
+          user_id: session?.user?.id,
+        })
         .eq("id", editingId);
 
       if (error) {
@@ -72,15 +94,7 @@ function TasksCrud() {
 
       console.log("data on update********* ", data);
       resetForm();
-      getTasksList()
-      // setTasks((prev) =>
-      //   prev.map((t) =>
-      //     t.id === editingId
-      //       ? { ...t, title: title.trim(), description: description.trim() }
-      //       : t,
-      //   ),
-      // );
-      // resetForm();
+      getTasksList();
     } else {
       const newTask: Task = {
         title: title.trim(),
@@ -89,7 +103,7 @@ function TasksCrud() {
 
       const { data, error } = await supabase
         .from("tasks")
-        .insert(newTask)
+        .insert({ ...newTask, user_id: session?.user?.id })
         .single();
 
       console.log("chekcing response for adding task****** data: ", data);
