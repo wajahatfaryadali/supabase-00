@@ -61,14 +61,28 @@ function App() {
   const handleAddOrSave = async () => {
     if (!title.trim()) return;
     if (editingId) {
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === editingId
-            ? { ...t, title: title.trim(), description: description.trim() }
-            : t,
-        ),
-      );
+      console.log("checking ********* ", editingId);
+      const { error, data } = await supabase
+        .from("tasks")
+        .update({ title: title, description: description })
+        .eq("id", editingId);
+
+      if (error) {
+        console.log("error while updating ********** ", error);
+        return;
+      }
+
+      console.log("data on update********* ", data);
       resetForm();
+      getTasksList()
+      // setTasks((prev) =>
+      //   prev.map((t) =>
+      //     t.id === editingId
+      //       ? { ...t, title: title.trim(), description: description.trim() }
+      //       : t,
+      //   ),
+      // );
+      // resetForm();
     } else {
       const newTask: Task = {
         title: title.trim(),
