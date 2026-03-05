@@ -9,7 +9,6 @@ function App() {
 
   const getSession = async () => {
     const { data } = await supabase.auth.getSession();
-    console.log("session data************ ", data.session);
 
     setSession(data.session);
   };
